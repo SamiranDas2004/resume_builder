@@ -1,6 +1,14 @@
 import express from 'express'
 import connectDB from './middlewares/db.js'
+import cors from 'cors'
 const app=express()
+
+
+const corsOption={
+    origin:"*"
+}
+
+app.use(cors(corsOption))
 
 app.get('/',(req,res)=>{
     res.send("hello")
