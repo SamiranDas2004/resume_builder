@@ -1,10 +1,4 @@
-import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import PDFDocument from 'pdfkit'
 
 export const resumeBuilder = (req, res) => {
     const {
@@ -19,17 +13,12 @@ export const resumeBuilder = (req, res) => {
     // Create a new PDF document
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
 
-    // Set the directory where the PDF will be saved
-    const outputDir = path.join(__dirname, 'output');
-    if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir);
-    }
+    // Set the response headers to indicate a file download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=${personal_info.name.replace(/\s+/g, '_')}_Resume.pdf`);
 
-    // Set the file path where the PDF will be saved
-    const filePath = path.join(outputDir, `${personal_info.name.replace(/\s+/g, '_')}_Resume.pdf`);
-
-    // Pipe the PDF to a writable stream
-    doc.pipe(fs.createWriteStream(filePath));
+    // Pipe the PDF to the response
+    doc.pipe(res);
 
     // Header - Name and Contact Info
     doc.fontSize(24).text(personal_info.name || 'No Name Provided', { align: 'center' }).moveDown(0.2);
@@ -38,18 +27,13 @@ export const resumeBuilder = (req, res) => {
     if (personal_info.linkedin) doc.text(personal_info.linkedin, { align: 'center' });
     if (personal_info.portfolio) doc.text(personal_info.portfolio, { align: 'center' }).moveDown(1);
 
-    // Helper function to add section titles with underlines
-    const addSectionTitle = (title) => {
-        doc.fontSize(14).text(title, { underline: true }).moveDown(0.5);
-    };
-
-    // Helper function to add subsections
+    // Add sections (Education, Skills, Experience, Certifications, Projects)
+    const addSectionTitle = (title) => doc.fontSize(14).text(title).moveDown(0.5);
     const addSubsection = (title, content) => {
         doc.fontSize(12).text(title, { bold: true });
         doc.fontSize(10).text(content).moveDown(0.5);
     };
 
-    // Add Education Section
     if (education.length > 0) {
         addSectionTitle('Education');
         education.forEach((edu) => {
@@ -57,13 +41,11 @@ export const resumeBuilder = (req, res) => {
         });
     }
 
-    // Add Skills Section
     if (skills.length > 0) {
         addSectionTitle('Technical Skills');
         doc.fontSize(10).text(skills.join(', ')).moveDown(1);
     }
 
-    // Add Work Experience Section
     if (work_experience.length > 0) {
         addSectionTitle('Experience');
         work_experience.forEach((job) => {
@@ -77,7 +59,6 @@ export const resumeBuilder = (req, res) => {
         });
     }
 
-    // Add Certifications Section
     if (certifications.length > 0) {
         addSectionTitle('Certifications');
         certifications.forEach((cert) => {
@@ -85,19 +66,20 @@ export const resumeBuilder = (req, res) => {
         });
     }
 
-    // Add Projects Section
     if (projects.length > 0) {
         addSectionTitle('Projects');
         projects.forEach((project) => {
             addSubsection(project.project_name || '', project.description || '');
-            doc.fontSize(10).text(`Technologies: ${project.technologies.join(', ') || ''}`);
+            // Check if project.technologies is an array and handle it
+            if (Array.isArray(project.technologies)) {
+                doc.fontSize(10).text(`Technologies: ${project.technologies.join(', ') || ''}`);
+            } else {
+                doc.fontSize(10).text('Technologies: No technologies listed');
+            }
             if (project.link) doc.text(`Link: ${project.link}`).moveDown(0.5);
         });
     }
-
-    // Finalize the PDF and end the document
+    
+    // Finalize the PDF and send it
     doc.end();
-
-    // Send the file path as a response
-    res.json({ message: 'PDF generated', filePath });
 };

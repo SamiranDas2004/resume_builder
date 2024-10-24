@@ -45,15 +45,16 @@ function PdfBuilder() {
     ],
   });
 
+  // State to store the PDF URL
+  const [pdfUrl, setPdfUrl] = useState("");
+
   const sendFormData = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(
-        "http://localhost:8000/api/resume",
-        formData
-      );
+      const response = await axios.post("http://localhost:8000/api/resume", formData);
       if (response.status === 200) {
         console.log(response.data);
+        setPdfUrl(response.data.pdfUrl); // Assuming your backend returns a PDF URL in the response
       }
     } catch (error) {
       console.log("Error:", error.message);
@@ -77,13 +78,18 @@ function PdfBuilder() {
   // Functions to add new fields
   const addField = (section) => {
     const newItem = section === "work_experience"
-      ? { job_title: "", company: "", start_date: "", end_date: "", description: "" }
+      ? { job_title: "", company: "", start_date: "", end_date: "", description: "", achievements: [] }
       : section === "education"
       ? { school_name: "", degree: "", graduation_year: "" }
       : section === "projects"
       ? { project_name: "", description: "", technologies: "", link: "" }
       : { name: "", issuer: "", date: "" };
     setFormData({ ...formData, [section]: [...formData[section], newItem] });
+  };
+
+  // Function to download the PDF
+  const downloadPdf = () => {
+    window.open(pdfUrl, "_blank");
   };
 
   return (
@@ -244,24 +250,17 @@ function PdfBuilder() {
               className="border p-3 rounded-lg w-full"
             />
             <input
-              name="description"
-              value={project.description}
-              onChange={(e) => handleInputChange("projects", index, e)}
-              placeholder="Project Description"
-              className="border p-3 rounded-lg w-full"
-            />
-            <input
-              name="technologies"
-              value={project.technologies}
-              onChange={(e) => handleInputChange("projects", index, e)}
-              placeholder="Technologies Used"
-              className="border p-3 rounded-lg w-full"
-            />
-            <input
               name="link"
               value={project.link}
               onChange={(e) => handleInputChange("projects", index, e)}
               placeholder="Project Link"
+              className="border p-3 rounded-lg w-full"
+            />
+            <textarea
+              name="description"
+              value={project.description}
+              onChange={(e) => handleInputChange("projects", index, e)}
+              placeholder="Project Description"
               className="border p-3 rounded-lg w-full"
             />
           </div>
@@ -289,7 +288,7 @@ function PdfBuilder() {
               name="issuer"
               value={cert.issuer}
               onChange={(e) => handleInputChange("certifications", index, e)}
-              placeholder="Issuing Organization"
+              placeholder="Issuer"
               className="border p-3 rounded-lg w-full"
             />
             <input
@@ -309,14 +308,23 @@ function PdfBuilder() {
           Add Certification
         </button>
 
-        {/* Submit Button */}
         <button
           type="submit"
-          className="mt-6 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg"
+          className="mt-6 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg"
         >
-          Submit Form
+          Generate PDF
         </button>
       </form>
+
+      {/* Download PDF Button */}
+      {pdfUrl && (
+        <button
+          onClick={downloadPdf}
+          className="mt-6 bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg"
+        >
+          Download PDF
+        </button>
+      )}
     </div>
   );
 }
