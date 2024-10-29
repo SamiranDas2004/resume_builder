@@ -11,7 +11,7 @@ const ResumePreview = ({ formData }) => {
           {formData.personal_info.email && <p>{formData.personal_info.email}</p>}
           {formData.personal_info.contactnumber && <p>{formData.personal_info.contactnumber}</p>}
           {formData.personal_info.linkedin && <p>LinkedIn: {formData.personal_info.linkedin}</p>}
-          {formData.personal_info.portfolio && <p>Portfolio: {formData.personal_info.portfolio}</p>}
+          {formData.personal_info.github && <p>github: {formData.personal_info.github}</p>}
         </div>
       </div>
 
@@ -102,7 +102,7 @@ function PdfBuilder() {
       contactnumber: "",
       email: "",
       linkedin: "",
-      portfolio: "",
+      github: "",
     },
     work_experience: [
       {
@@ -137,18 +137,35 @@ function PdfBuilder() {
     ],
   });
 
-const sendFormData = async (e) => {
+  const sendFormData = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:8000/api/resume", formData);
-      if (response.status === 200) {
-        console.log(response.data);
-    
-      }
+        const response = await axios.post("http://localhost:8000/api/resume", formData, {
+            responseType: 'blob', // Set response type to blob to handle binary data
+        });
+
+        if (response.status === 200) {
+            // Create a blob URL for the PDF
+            const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
+            const pdfURL = URL.createObjectURL(pdfBlob);
+
+            // Create a temporary link to trigger the download
+            const link = document.createElement('a');
+            
+            link.href = pdfURL;
+            link.download = 'resume.pdf'; // Set the desired file name
+            document.body.appendChild(link);
+            link.click();
+
+            // Clean up by removing the link and revoking the blob URL
+            document.body.removeChild(link);
+            URL.revokeObjectURL(pdfURL);
+        }
     } catch (error) {
-      console.log("Error:", error.message);
+        console.log("Error:", error.message);
     }
-  };
+};
+
 
   const handleInputChange = (section, index, event) => {
     const updatedData = formData[section].map((item, i) =>
@@ -244,10 +261,10 @@ const sendFormData = async (e) => {
                     className="border p-3 rounded-lg w-full"
                   />
                   <input
-                    name="portfolio"
-                    value={formData.personal_info.portfolio}
+                    name="github"
+                    value={formData.personal_info.github}
                     onChange={handlePersonalInfoChange}
-                    placeholder="Portfolio"
+                    placeholder="github"
                     className="border p-3 rounded-lg w-full"
                   />
                 </div>
@@ -349,11 +366,11 @@ const sendFormData = async (e) => {
                 <h2 className="text-xl font-semibold mb-4">Projects</h2>
                 {formData.projects.map((project, index) => (
                   <div key={index} className="grid grid-cols-1 gap-4 mb-4">
-                    <input
-                      name="project_name"
-                      value={project.project_name}
+                  <input
+                      name="link"
+                      value={project.link}
                       onChange={(e) => handleInputChange("projects", index, e)}
-                      placeholder="Project Name"
+                      placeholder="Project Link"
                       className="border p-3 rounded-lg w-full"
                     />
                     <textarea
@@ -361,13 +378,6 @@ const sendFormData = async (e) => {
                       value={project.description}
                       onChange={(e) => handleInputChange("projects", index, e)}
                       placeholder="Description"
-                      className="border p-3 rounded-lg w-full"
-                    />
-                    <input
-                      name="link"
-                      value={project.link}
-                      onChange={(e) => handleInputChange("projects", index, e)}
-                      placeholder="Project Link"
                       className="border p-3 rounded-lg w-full"
                     />
                   </div>
@@ -409,13 +419,15 @@ const sendFormData = async (e) => {
                   Add Certification
                 </button>
               </div>
-              <button type="Submit"  className="bg-blue-600 text-white px-4 py-2 rounded">
-            Submit
-                </button>
+
+              {/* Submit Button */}
+              <button type="submit" className="w-full bg-green-600 text-white px-4 py-2 rounded-lg">
+                Submit and Generate PDF
+              </button>
             </form>
           </div>
 
-          {/* Preview Section */}
+          {/* Resume Preview Section */}
           <ResumePreview formData={formData} />
         </div>
       </div>
