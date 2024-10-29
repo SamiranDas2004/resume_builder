@@ -2,7 +2,6 @@ import PDFDocument from 'pdfkit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Define __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -16,9 +15,12 @@ export const resumeBuilder = (req, res) => {
         projects = []
     } = req.body;
 
+    // Create a new PDF document
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    const githubIconPath = path.join(__dirname, 'output/githubicon.png');
+    const linkedinIconPath = path.join(__dirname, 'output/linkedinicon.png');
 
-    // Set response headers for file download
+    // Set the response headers to indicate a file download
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=${personal_info.name.replace(/\s+/g, '_')}_Resume.pdf`);
 
@@ -26,34 +28,36 @@ export const resumeBuilder = (req, res) => {
     doc.pipe(res);
 
     // Header - Name and Contact Info
-    doc.fontSize(24).text(personal_info.name || 'No Name Provided', { align: 'center' }).moveDown(0.2);
-    if (personal_info.phone) doc.fontSize(10).text(personal_info.phone, { align: 'center' });
-    if (personal_info.email) doc.text(personal_info.email, { align: 'center' });
-    
-    // Define the image paths as strings using the __dirname workaround
-    const githubIconPath = path.join(__dirname, 'output/githubicon.png');
-    const linkedinIconPath = path.join(__dirname, 'output/linkedinicon.png');
+  // Header - Name and Contact Info
+doc.fontSize(24).text(personal_info.name || 'No Name Provided', { align: 'center' }).moveDown(0.2);
 
-    // Draw GitHub icon and link if provided
-    if (personal_info.github) {
-        doc.image(githubIconPath, 270, doc.y, { width: 15, height: 15 });
-        doc.fillColor('blue').text(personal_info.github, 290, doc.y - 15, { link: personal_info.github });
-    }
+// Smaller font size for contact details
+doc.fontSize(10);
+if (personal_info.phone) doc.text(personal_info.phone, { align: 'center' });
+if (personal_info.email) doc.text(personal_info.email, { align: 'center' });
 
-    // Draw LinkedIn icon and link if provided
-    if (personal_info.linkedin) {
-        doc.image(linkedinIconPath, 270, doc.y + 15, { width: 15, height: 15 });
-        doc.fillColor('blue').text(personal_info.linkedin, 290, doc.y - 15, { link: personal_info.linkedin });
-    }
+// LinkedIn and GitHub with icons
+const iconSize = 10; // Smaller size for icons
+if (personal_info.linkedin) {
+    doc.image(linkedinIconPath, doc.x - iconSize, doc.y, { width: iconSize, height: iconSize });
+    doc.text(` ${personal_info.linkedin}`, { align: 'center', continued: true }).moveDown(0.2);
+}
+if (personal_info.github) {
+    doc.image(githubIconPath, doc.x - iconSize, doc.y, { width: iconSize, height: iconSize });
+    doc.text(` ${personal_info.github}`, { align: 'center', continued: true }).moveDown(0.2);
+}
 
-    // Sections (Education, Skills, Experience, Certifications, Projects)
+// Portfolio link in the same smaller font size
+if (personal_info.portfolio) doc.text(personal_info.portfolio, { align: 'center' }).moveDown(1);
+
+    // Helper functions for sections
     const addSectionTitle = (title) => doc.fontSize(14).text(title).moveDown(0.5);
     const addSubsection = (title, content) => {
         doc.fontSize(12).text(title, { bold: true });
         doc.fontSize(10).text(content).moveDown(0.5);
     };
 
-    // Education
+    // Sections (Education, Skills, Experience, Certifications, Projects)
     if (education.length > 0) {
         addSectionTitle('Education');
         education.forEach((edu) => {
@@ -61,13 +65,11 @@ export const resumeBuilder = (req, res) => {
         });
     }
 
-    // Skills
     if (skills.length > 0) {
         addSectionTitle('Technical Skills');
         doc.fontSize(10).text(skills.join(', ')).moveDown(1);
     }
 
-    // Work Experience
     if (work_experience.length > 0) {
         addSectionTitle('Experience');
         work_experience.forEach((job) => {
@@ -81,7 +83,6 @@ export const resumeBuilder = (req, res) => {
         });
     }
 
-    // Certifications
     if (certifications.length > 0) {
         addSectionTitle('Certifications');
         certifications.forEach((cert) => {
@@ -89,17 +90,19 @@ export const resumeBuilder = (req, res) => {
         });
     }
 
-    // Projects
     if (projects.length > 0) {
         addSectionTitle('Projects');
         projects.forEach((project) => {
             addSubsection(project.project_name || '', project.description || '');
             if (Array.isArray(project.technologies)) {
                 doc.fontSize(10).text(`Technologies: ${project.technologies.join(', ') || ''}`);
+            } else {
+                doc.fontSize(10).text('Technologies: No technologies listed');
             }
             if (project.link) doc.text(`Link: ${project.link}`).moveDown(0.5);
         });
     }
 
+    // Finalize the PDF and send it
     doc.end();
 };
